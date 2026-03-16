@@ -52,7 +52,7 @@ Optional (for local development):
 
 ---
 
-# Setup with Docker
+# Setup with Docker (Using MySQL)
 
 Build the container:
 
@@ -66,11 +66,63 @@ Start the services:
 docker compose up
 ```
 
-The API server will be available at:
+---
 
+# Setup Database Schema
+
+### Login to MySQL inside the container
+
+```bash
+docker exec -it jmdict-mysql mysql -uroot -proot
 ```
-http://localhost:8000
+
+### Select database
+
+```sql
+USE jmdict;
 ```
+
+---
+
+# Create Tables
+
+```sql
+CREATE TABLE dictionary_entries (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    word VARCHAR(255),
+    reading VARCHAR(255),
+    vi_crawled BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE dictionary_meanings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    entry_id INT,
+    meaning_en TEXT,
+    FOREIGN KEY (entry_id) REFERENCES dictionary_entries(id)
+);
+
+CREATE TABLE dictionary_meanings_vi (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    entry_id INT,
+    meaning_vi TEXT,
+    source VARCHAR(50),
+    FOREIGN KEY (entry_id) REFERENCES dictionary_entries(id)
+);
+```
+
+---
+
+# Create Indexes
+
+Indexes improve lookup performance when searching words.
+
+```sql
+CREATE INDEX idx_word ON dictionary_entries(word);
+CREATE INDEX idx_reading ON dictionary_entries(reading);
+CREATE INDEX idx_entry_id_meanings ON dictionary_meanings(entry_id);
+CREATE INDEX idx_entry_id_meanings_vi ON dictionary_meanings_vi(entry_id);
+```
+
 ---
 
 # Data Pipeline
@@ -200,7 +252,8 @@ project-root
 │   └── import_vi_from_jdict.py
 │
 ├── data
-│   |___ JMdict_e
+│   └── JMdict_e
+│
 ├── docker-compose.yml
 ├── Dockerfile
 └── README.md
